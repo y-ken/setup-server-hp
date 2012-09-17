@@ -18,7 +18,7 @@ sh setup_server_hp.sh
 It is available for many distributions to use HP official repositories. <br>
 http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/
 
-Also available for CentOS-6.x
+Also available for CentOS-6.x <br>
 http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/RedHat/6/x86_64/current/
 
 Currently, on September 2012, you can install these packages with yum command.
