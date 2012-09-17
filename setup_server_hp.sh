@@ -13,7 +13,7 @@ hplog -p
 # check fan speed status
 hplog -f
 
-# check temperature  status
+# check temperature status
 hplog -t
 
 while true; do
