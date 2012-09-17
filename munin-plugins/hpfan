@@ -1,0 +1,96 @@
+#!/usr/bin/env perl
+#
+# hpfan - Munin plugin for HP server fans
+#
+# Copyright (C) 2010 Magnus Hagander
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+=head1 NAME
+
+hpfan - Munin plugin to monitor HP server fans
+
+=head1 CONFIGURATION
+
+The plugin needs to be able to execute /sbin/hplog, which requires
+root permissions. The following configuration is needed:
+
+  [hpfan]
+  user=root
+
+=head1 INTERPRETATION
+
+The graph will show information about how many fans are ok and how
+many are degratded.
+It does not, currently, show the speed of the fans.
+
+=head1 MAGIC MARKERS
+
+ #%# family=contrib
+
+=head1 AUTHOR
+
+Magnus Hagander <magnus@hagander.net>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+use strict;
+use warnings;
+
+use Munin::Plugin;
+
+if ( $ARGV[0] and $ARGV[0] eq "autoconf") {
+   print "no\n";
+   exit(0);
+}
+
+if ( $ARGV[0] and $ARGV[0] eq "config") {
+   print "graph_title HP Fans\n";
+   print "graph_category system\n";
+   print "ok.label Fans OK\n";
+   print "ok.type GAUGE\n";
+   print "ok.min 0\n";
+   print "degraded.label Fans degraded\n";
+   print "degraded.type GAUGE\n";
+   print "degraded.min 0\n";
+   print "degraded.critical 1\n";
+   exit(0);
+}
+
+open(HPLOG, "/sbin/hplog -f |") || die "Could not run hplog\n";
+my $ok=0;
+my $degraded=0;
+
+while (<HPLOG>) {
+   next if /^\s*$/;
+   next if /^\s*ID/;
+   if (/\s+(Normal|Nominal)\s+/) {
+      $ok++;
+   }
+   elsif (/\s+Absent\s+/) {
+      # unknown, we don't track that
+   }
+   else {
+      $degraded++;
+   }
+}
+close(HPLOG);
+
+print "ok.value $ok\n";
+print "degraded.value $degraded\n";

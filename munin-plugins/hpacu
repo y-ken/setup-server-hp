@@ -1,0 +1,163 @@
+#!/usr/bin/env perl
+#
+# hpacu - Munin plugin for HP Array Controllers
+#
+# Copyright (C) 2010 Magnus Hagander
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+=head1 NAME
+
+hpacu - Munin plugin to monitor HP Array Controllers
+
+=head1 CONFIGURATION
+
+The plugin needs to be able to execute /usr/sbin/hpacucli, which requires
+root permissions. The following configuration is needed:
+
+  [hpacu]
+  user=root
+
+=head1 INTERPRETATION
+
+The graph will show information about number of controllers,
+logical drives and physical drives that are ok or degraded.
+
+=head1 MAGIC MARKERS
+
+ #%# family=contrib
+
+=head1 AUTHOR
+
+Magnus Hagander <magnus@hagander.net>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+use strict;
+use warnings;
+
+use Munin::Plugin;
+
+if ( $ARGV[0] and $ARGV[0] eq "autoconf") {
+   print "no\n";
+   exit(0);
+}
+
+if ( $ARGV[0] and $ARGV[0] eq "config") {
+   print "graph_title HP Smart Array\n";
+   print "graph_category disk\n";
+   print "hpacu_controllers_ok.label Controllers OK\n";
+   print "hpacu_controllers_ok.type GAUGE\n";
+   print "hpacu_controllers_ok.min 0\n";
+   print "hpacu_controllers_deg.label Controllers degraded\n";
+   print "hpacu_controllers_deg.type GAUGE\n";
+   print "hpacu_controllers_deg.min 0\n";
+   print "hpacu_controllers_deg.critical 1\n";
+   print "hpacu_logicaldrives_ok.label Logical Drives OK\n";
+   print "hpacu_logicaldrives_ok.type GAUGE\n";
+   print "hpacu_logicaldrives_ok.min 0\n";
+   print "hpacu_logicaldrives_deg.label Logical Drives degraded\n";
+   print "hpacu_logicaldrives_deg.type GAUGE\n";
+   print "hpacu_logicaldrives_deg.min 0\n";
+   print "hpacu_logicaldrives_deg.critical 1\n";
+   print "hpacu_physicaldrives_ok.label Physical Drives OK\n";
+   print "hpacu_physicaldrives_ok.type GAUGE\n";
+   print "hpacu_physicaldrives_ok.min 0\n";
+   print "hpacu_physicaldrives_deg.label Physical Drives degraded\n";
+   print "hpacu_physicaldrives_deg.type GAUGE\n";
+   print "hpacu_physicaldrives_deg.min 0\n";
+   print "hpacu_physicaldrives_deg.critical 1\n";
+   exit(0);
+}
+
+my @slots;
+open(HPACU, "/usr/sbin/hpacucli controller all show |") || die "Could not run hpacucli\n";
+while (<HPACU>) {
+   if (/Smart Array.* in Slot (\d+)/) {
+      push @slots, $1;
+   }
+}
+close(HPACU);
+
+my $controllers_ok = 0;
+my $controllers_degrad = 0;
+my $logicaldrives_ok = 0;
+my $logicaldrives_degrad = 0;
+my $physicaldrives_ok = 0;
+my $physicaldrives_degrad = 0;
+my $controllers_msg = '';
+my $logicaldrives_msg = '';
+my $physicaldrives_msg = '';
+
+foreach my $slot (@slots) {
+   open(HPACU, "/usr/sbin/hpacucli controller slot=$slot show |") || die "Could not run hpacucli\n";
+   my $ok = 1;
+   while (<HPACU>) {
+      if (/^\s+(Controller Status|Cache Status|Battery\/Capacitor Status):\s+([^\s]+)/) {
+         unless ($2 eq "OK") {
+            $ok = 0;
+            $controllers_msg .= "Controller $slot, $1: $2\n";
+         }
+      }
+   }
+   close(HPACU);
+   if ($ok) { $controllers_ok++ } else { $controllers_degrad++ }
+
+   # Check logical drives
+   open(HPACU, "/usr/sbin/hpacucli controller slot=$slot logicaldrive all show |") || die "Could not run hpacucli\n";
+   while (<HPACU>) {
+      if (/logicaldrive \d+ \(.*, .*, (.*)\)/) {
+         if ($1 eq "OK") {
+            $logicaldrives_ok++;
+         } else {
+            $logicaldrives_degrad++;
+            $logicaldrives_msg .= $_;
+         }
+      }
+   }
+
+   # Finally, check physical drives
+   open(HPACU, "/usr/sbin/hpacucli controller slot=$slot physicaldrive all show |") || die "Could not run hpacucli\n";
+   while (<HPACU>) {
+      if (/physicaldrive .* \(.*, .*, .*, (.*)\)/) {
+         if ($1 eq "OK") {
+            $physicaldrives_ok++;
+         } else {
+            $physicaldrives_degrad++;
+            $physicaldrives_msg .= $_;
+         }
+      }
+    }
+   close(HPACU);
+}
+
+$controllers_msg =~ s/\n/ :: /g;
+$logicaldrives_msg =~ s/\n/ :: /g;
+$physicaldrives_msg =~ s/\n/ :: /g;
+
+print "hpacu_controllers_ok.value $controllers_ok\n";
+print "hpacu_controllers_deg.value $controllers_degrad\n";
+print "hpacu_controllers_deg.extinfo $controllers_msg\n" if ($controllers_msg);
+print "hpacu_logicaldrives_ok.value $logicaldrives_ok\n";
+print "hpacu_logicaldrives_deg.value $logicaldrives_degrad\n";
+print "hpacu_logicaldrives_deg.extinfo $logicaldrives_msg\n" if ($logicaldrives_msg);
+print "hpacu_physicaldrives_ok.value $physicaldrives_ok\n";
+print "hpacu_physicaldrives_deg.value $physicaldrives_degrad\n";
+print "hpacu_physicaldrives_deg.extinfo $physicaldrives_msg\n" if ($physicaldrives_msg);
+

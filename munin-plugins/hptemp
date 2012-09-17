@@ -1,0 +1,104 @@
+#!/usr/bin/env perl
+#
+# hptemp - Munin plugin for HP server temperature 
+#
+# Copyright (C) 2010 Magnus Hagander
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+=head1 NAME
+
+hptemp - Munin plugin to monitor HP server temp 
+
+=head1 CONFIGURATION
+
+The plugin needs to be able to execute /sbin/hplog, which requires
+root permissions. The following configuration is needed:
+
+  [hptemp]
+  user=root
+
+=head1 INTERPRETATION
+
+The graphs will show the temperature measured at different locations
+in the server.
+
+=head1 MAGIC MARKERS
+
+ #%# family=contrib
+
+=head1 AUTHOR
+
+Magnus Hagander <magnus@hagander.net>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+use strict;
+use warnings;
+
+use Munin::Plugin;
+
+if ( $ARGV[0] and $ARGV[0] eq "autoconf") {
+   print "no\n";
+   exit(0);
+}
+
+my @sensors;
+open(HPLOG, "/sbin/hplog -t |") || die "Could not run hplog\n";
+while (<HPLOG>) {
+   next if /^\s*$/;
+   next if /^ID/;
+   if (/^\s*(\d+)\s*Basic Sensor\s+(CPU \(\d+\)|Processor Zone|I\/O Zone)\s+(\S+)\s+\d+F\/\s*(\d+)C\s+\d+F\/\s*(\d+)C/) {
+      push @sensors, {
+	'id' => $1,
+	'name' => $2,
+	'state' => $3,
+	'current' => $4,
+	'threshold' => $5
+	};
+   }
+   else {
+      die "Could not parse line $_";
+   }
+}
+close(HPLOG);
+
+if ( $ARGV[0] and $ARGV[0] eq "config") {
+   print "graph_title HP temperature\n";
+   print "graph_category system\n";
+   for my $sensor (@sensors) {
+      print "s" . $sensor->{'id'} . ".label " . $sensor->{'name'} . "\n";
+      print "s" . $sensor->{'id'} . ".type GAUGE\n";
+      print "s" . $sensor->{'id'} . ".min 0\n";
+      print "s" . $sensor->{'id'} . ".warning " . ($sensor->{'threshold'}-10) . "\n";
+      print "s" . $sensor->{'id'} . ".critical " . $sensor->{'threshold'} . "\n";
+   }
+   print "degraded.label Temperature sensors not normal\n";
+   print "degraded.type GAUGE\n";
+   print "degraded.min 0\n";
+   print "degraded.critical 1\n";
+   exit(0);
+}
+
+my $notok = 0;
+for my $sensor (@sensors) {
+    print "s" . $sensor->{'id'} . ".value " . $sensor->{'current'} . "\n";
+    $notok++ if ($sensor->{'state'} ne "Normal");
+}
+print "degraded.value $notok\n";
