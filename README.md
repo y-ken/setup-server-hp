@@ -1,25 +1,27 @@
-## setup-server-hp - HP Proliant setup repository.
+## setup-server-hp - HP Proliant setup script.
 
 ### Summary
 
-HP Proliant setup repository.
+HP Proliant setup script includes:
 * add HP official yum repository into your machine. 
 * add munin hardware monitoring plugin for HP Proliant Server
 
 ### Usage
 
+````
 wget https://raw.github.com/y-ken/setup-server-hp/master/setup_server_hp.sh
 sh setup_server_hp.sh
+````
 
 ### What is HP official yum repository?
 
-It is available for many distributions to use HP official repositories.
+It is available for many distributions to use HP official repositories. <br>
 http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/
 
 Also available for CentOS-6.x
 http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/RedHat/6/x86_64/current/
 
-Currently, you can install these packages with yum command.
+Currently, on September 2012, you can install these packages with yum command.
 
 ````
 $ yum list available --disablerepo=* --enablerepo=HP-Proliant
