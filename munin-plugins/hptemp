@@ -64,7 +64,7 @@ open(HPLOG, "/sbin/hplog -t |") || die "Could not run hplog\n";
 while (<HPLOG>) {
    next if /^\s*$/;
    next if /^ID/;
-   if (/^\s*(\d+)\s*Basic Sensor\s+(CPU \(\d+\)|Processor Zone|I\/O Zone)\s+(\S+)\s+\d+F\/\s*(\d+)C\s+\d+F\/\s*(\d+)C/) {
+   if (/^\s*(\d+)\s*Basic Sensor\s+(CPU \(\d+\)|Ambient|Processor Zone|Memory Board|System Board|Pwr\. Supply Bay|I\/O Zone|SCSI Backplane)\s+(\S+)\s+\d+F\/\s*(\d+)C\s+\d+F\/\s*(\d+)C/) {
       push @sensors, {
 	'id' => $1,
 	'name' => $2,
