@@ -1,6 +1,6 @@
 [HP-Proliant]
 name=HP Proliant Red Hat Enterprise Linux $releasever - $basearch
-baseurl=http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/RedHat/$releasever/$basearch/current/
+baseurl=http://downloads.linux.hp.com/SDR/downloads/servicepackforproliant/RedHat/$releasever/$basearch/current/
 enabled=1
 gpgcheck=1
-gpgkey=http://downloads.linux.hp.com/SDR/downloads/ProLiantSupportPack/GPG-KEY-ProLiantSupportPack
+gpgkey=http://downloads.linux.hp.com/SDR/downloads/servicepackforproliant/GPG-KEY-ServicePackforProLiant
